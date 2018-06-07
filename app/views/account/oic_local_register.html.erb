@@ -1,0 +1,11 @@
+<h3>register based on your QF profile info:</h3>
+
+<%= form_tag ('/account/register') do -%>
+Login name: <%= text_field_tag('user[login]', value=@user_info['sub']) %><br />
+First name: <%= text_field_tag('user[firstname]', value=@user_info['first_name']) %><br />
+Last name : <%= text_field_tag('user[lastname]', value=@user_info['last_name']) %><br />
+Email: <%= text_field_tag('user[mail]', value=@user_info['email']) %><br />
+<%= submit_tag 'Save' %>
+<% end -%>
+
+ 

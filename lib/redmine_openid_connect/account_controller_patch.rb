@@ -37,6 +37,16 @@ module RedmineOpenidConnect
 
     # performs redirect to SSO server
     def oic_login
+      oic_session = oic_session_init
+      redirect_to oic_session.authorization_url
+    end
+    
+    def oic_register
+      oic_session = oic_session_init
+      redirect_to oic_session.authorization_url_register      
+    end
+    
+    def oic_session_init
       if session[:oic_session_id].blank?
         oic_session = OicSession.create
         session[:oic_session_id] = oic_session.id
@@ -57,8 +67,46 @@ module RedmineOpenidConnect
           end
         end
       end
+      oic_session
+    end
+
+    def oic_local_register
+      puts "in oic_local_register"
+      if params[:code]
+        puts "in oic_local_register: got code"
+        oic_session = OicSession.find(session[:oic_session_id])
+
+        unless oic_session.present?
+          return invalid_credentials
+        end
+        puts "in oic_local_register: valid credential"
+        # verify request state or reauthorize
+        unless oic_session.state == params[:state]
+          flash[:error] = "Invalid OpenID Connect request."
+          return redirect_to oic_local_logout
+        end
+
+        oic_session.update_attributes!(authorize_params)
+        puts "in oic_local_register: updated attributes"
+        # verify id token nonce or reauthorize
+        if oic_session.id_token.present?
+          unless oic_session.claims['nonce'] == oic_session.nonce
+            flash[:error] = "Invalid ID Token."
+            return redirect_to oic_local_logout
+          end
+        end
+
+        # get access token and user info
+        oic_session.get_access_token_register!
+        puts "in oic_local_register: got access_token"        
+        user_info = oic_session.get_user_info!
+        puts "got user-info"
+        # DEBUG:
+        @user_info = user_info
+      else
+        render :template => 'account/oic_local_register'
+      end 
       
-      redirect_to oic_session.authorization_url
     end
 
     def oic_local_logout

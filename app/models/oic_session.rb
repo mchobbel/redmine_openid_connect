@@ -60,6 +60,18 @@ class OicSession < ActiveRecord::Base
     )
   end
 
+  def get_access_token_register!
+    response = self.class.get_token(access_token_query_register)
+    if response["error"].blank?
+      self.access_token = response["access_token"] if response["access_token"].present?
+      self.refresh_token = response["refresh_token"] if response["refresh_token"].present?
+      self.id_token = response["id_token"] if response["id_token"].present?
+      self.expires_at = (DateTime.now + response["expires_in"].seconds) if response["expires_in"].present?
+      self.save!
+    end
+    return response
+  end
+  
   def get_access_token!
     response = self.class.get_token(access_token_query)
     if response["error"].blank?
@@ -150,12 +162,18 @@ class OicSession < ActiveRecord::Base
 
   def authorization_url
     config = dynamic_config
-    config["authorization_endpoint"] + "?" + authorization_query.to_param
+    q = authz_query "#{host_name}/oic/local_login"
+    config["authorization_endpoint"] + "?" + q.to_param
+  end
+  
+  def authorization_url_register
+    config = dynamic_config
+    q = authz_query "#{host_name}/oic/local_register"    
+    config["authorization_endpoint"] + "?" + q.to_param
   end
 
   def end_session_url
-    config = dynamic_config
-    config["end_session_endpoint"] + "?" + end_session_query.to_param
+    client_config['oc_logout_url'] + "?" + end_session_query.to_param
   end
 
   def randomize_state!
@@ -166,25 +184,37 @@ class OicSession < ActiveRecord::Base
     self.nonce = SecureRandom.uuid unless self.nonce.present?
   end
 
-  def authorization_query
+
+
+  # multiplex this .. for 2 options:
+  #    authz_query "#{host_name}/oic/local_login"
+  #    authz_query "#{host_name}/oic/local_register"  
+  def authz_query( redir_uri)
     query = {
       "response_type" => "code",
       "state" => self.state,
       "nonce" => self.nonce,
       "scope" => "openid profile email user_name",
-      "redirect_uri" => "#{host_name}/oic/local_login",
+      "redirect_uri" => redir_uri ,
       "client_id" => client_config['client_id'],
     }
   end
 
-  def access_token_query
+  def access_token_query_for(redir_uri)
     query = {
       'grant_type' => 'authorization_code',
       'code' => code,
       'scope' => 'openid profile email user_name',
       'id_token' => id_token,
-      'redirect_uri' => "#{host_name}/oic/local_login",
+      'redirect_uri' => redir_uri
     }
+  end
+  
+  def access_token_query
+    access_token_query_for("#{host_name}/oic/local_login")
+  end
+  def access_token_query_register
+    access_token_query_for("#{host_name}/oic/local_register")
   end
 
   def refresh_token_query
