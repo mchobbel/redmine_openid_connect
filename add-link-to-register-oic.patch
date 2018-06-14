@@ -1,0 +1,12 @@
+--- app/views/account/register.html.erb~	2018-01-08 19:37:38.000000000 +0000
++++ app/views/account/register.html.erb	2018-06-07 14:40:01.523386099 +0000
+@@ -2,7 +2,7 @@
+ 
+ <%= labelled_form_for @user, :url => register_path do |f| %>
+ <%= error_messages_for 'user' %>
+-
++<a href="/oic/register">Register via QF</a>
+ <div class="box tabular">
+ <% if @user.auth_source_id.nil? %>
+   <p><%= f.text_field :login, :size => 25, :required => true %></p>
+
