@@ -146,7 +146,7 @@ module RedmineOpenidConnect
         unless oic_session.authorized?
           return invalid_credentials
         end
-
+        logger.warn "Got user #{user_info["email"]}"
         # Check if there's already an existing user
         user = User.find_by_mail(user_info["email"])
 
