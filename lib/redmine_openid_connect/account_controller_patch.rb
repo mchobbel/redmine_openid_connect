@@ -146,9 +146,13 @@ module RedmineOpenidConnect
         unless oic_session.authorized?
           return invalid_credentials
         end
+
         logger.warn "Got user #{user_info["email"]}"
+	usr_name = user_info["sub"]
+        logger.warn "Got username #{usr_name}"
         # Check if there's already an existing user
-        user = User.find_by_mail(user_info["email"])
+	#   user = User.find_by_mail(user_info["email"])
+	user = User.where(:login => usr_name).first
 
         if user.nil?
           user = User.new
